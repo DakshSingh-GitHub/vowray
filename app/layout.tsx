@@ -17,6 +17,10 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Vowray — AI Assistant",
   description: "Vowray is a calm, thoughtful AI assistant.",
+  icons: {
+    icon: "/vowray-logo.png",
+    apple: "/vowray-logo.png",
+  },
 };
 
 export default function RootLayout({
