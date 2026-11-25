@@ -58,12 +58,14 @@ export function ChatArea({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-resize textarea
+  // Auto-resize textarea and only show scrollbar when content exceeds max height
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    const nextHeight = Math.min(el.scrollHeight, 200);
+    el.style.height = `${nextHeight}px`;
+    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
   }, [input]);
 
   // Smooth scroll to bottom when messages update
@@ -77,6 +79,7 @@ export function ChatArea({
     setInput("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
+      textareaRef.current.style.overflowY = "hidden";
     }
     onSendMessage(trimmed);
   };
@@ -212,7 +215,7 @@ export function ChatArea({
               onKeyDown={handleKeyDown}
               placeholder="Message Vowray…"
               aria-label="Message Vowray"
-              className="flex-1 max-h-[200px] py-2 bg-transparent resize-none outline-none text-[15px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              className="flex-1 max-h-[200px] overflow-y-hidden py-2 bg-transparent resize-none outline-none text-[15px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
 
             {isStreaming ? (
