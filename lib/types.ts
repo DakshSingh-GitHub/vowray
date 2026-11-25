@@ -1,10 +1,19 @@
 export type ThemeMode = "light" | "dark";
 
+export interface GeneratedImage {
+  id: string;
+  dataUrl: string;
+  prompt: string;
+  model?: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "model";
   content: string;
   createdAt: number;
+  images?: GeneratedImage[];
+  statusText?: string;
   isError?: boolean;
   isStopped?: boolean;
 }

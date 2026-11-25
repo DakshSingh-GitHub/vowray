@@ -130,7 +130,9 @@ export function VowrayApp() {
             ...s,
             updatedAt: Date.now(),
             messages: s.messages.map((m) =>
-              m.id === target.messageId ? { ...m, isStopped: true } : m
+              m.id === target.messageId
+                ? { ...m, isStopped: true, statusText: undefined }
+                : m
             ),
           };
           void putSession(updated);
@@ -271,7 +273,7 @@ export function VowrayApp() {
     let lastPersistedAt = 0;
 
     try {
-      const finalContent = await streamChatResponse({
+      const finalResult = await streamChatResponse({
         history: historyBeforePrompt,
         prompt: promptText,
         signal: controller.signal,
@@ -300,9 +302,49 @@ export function VowrayApp() {
             })
           );
         },
+        onStatus: (statusText) => {
+          if (controller.signal.aborted) return;
+          setSessions((prev) =>
+            prev.map((s) => {
+              if (s.id !== targetSessionId) return s;
+              return {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === assistantMessageId
+                    ? { ...m, statusText: statusText || undefined }
+                    : m
+                ),
+              };
+            })
+          );
+        },
+        onImage: (image) => {
+          if (controller.signal.aborted) return;
+          const imgTime = Date.now();
+          setSessions((prev) =>
+            prev.map((s) => {
+              if (s.id !== targetSessionId) return s;
+              const updated: ChatSession = {
+                ...s,
+                updatedAt: imgTime,
+                messages: s.messages.map((m) =>
+                  m.id === assistantMessageId
+                    ? { ...m, images: [...(m.images ?? []), image] }
+                    : m
+                ),
+              };
+              void putSession(updated);
+              return updated;
+            })
+          );
+        },
       });
 
-      if (!finalContent && !controller.signal.aborted) {
+      if (
+        !finalResult.content &&
+        finalResult.images.length === 0 &&
+        !controller.signal.aborted
+      ) {
         setSessions((prev) =>
           prev.map((s) => {
             if (s.id !== targetSessionId) return s;
@@ -313,6 +355,7 @@ export function VowrayApp() {
                   ? {
                       ...m,
                       content: "No response was returned.",
+                      statusText: undefined,
                       isError: true,
                     }
                   : m

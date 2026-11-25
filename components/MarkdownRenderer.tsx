@@ -3,8 +3,35 @@
 import React, { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import hljs from "highlight.js";
 import { Check, Copy } from "lucide-react";
+import { SvgPreviewBlock } from "./SvgPreviewBlock";
+
+function highlightCode(code: string, language?: string): string {
+  try {
+    const lang = language === "svg" ? "xml" : language;
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value;
+    }
+    return hljs.highlightAuto(code).value;
+  } catch {
+    return code
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+}
+
+function isSvgCodeBlock(code: string, language?: string): boolean {
+  const normalizedLang = language?.toLowerCase();
+  if (normalizedLang === "svg") return true;
+  if (!normalizedLang || normalizedLang === "xml" || normalizedLang === "html") {
+    return /^\s*(?:<\?xml[\s\S]*?\?>\s*)?<svg[\s>]/i.test(code);
+  }
+  return false;
+}
 
 interface CodeBlockProps {
   language?: string;
@@ -14,19 +41,14 @@ interface CodeBlockProps {
 function CodeBlock({ language, code }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
-  const highlightedHtml = useMemo(() => {
-    try {
-      if (language && hljs.getLanguage(language)) {
-        return hljs.highlight(code, { language }).value;
-      }
-      return hljs.highlightAuto(code).value;
-    } catch {
-      return code
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    }
-  }, [code, language]);
+  const highlightedHtml = useMemo(
+    () => highlightCode(code, language),
+    [code, language]
+  );
+
+  if (isSvgCodeBlock(code, language)) {
+    return <SvgPreviewBlock code={code} highlightedHtml={highlightedHtml} />;
+  }
 
   const handleCopy = async () => {
     try {
@@ -78,11 +100,45 @@ interface MarkdownRendererProps {
   content: string;
 }
 
+/**
+ * Normalizes LaTeX `\[...\]` / `\(...\)` math delimiters and wraps standalone raw
+ * `<svg>...</svg>` blocks into fenced `svg` blocks outside of existing code blocks.
+ */
+function preprocessMarkdown(markdown: string): string {
+  const segments = markdown.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)/g);
+
+  return segments
+    .map((segment, index) => {
+      // Odd indices are code blocks or inline code spans; leave untouched.
+      if (index % 2 === 1) return segment;
+
+      return segment
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_match, expr: string) => {
+          const trimmed = expr.trim();
+          return trimmed ? `\n$$\n${trimmed}\n$$\n` : "";
+        })
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_match, expr: string) => {
+          const trimmed = expr.trim();
+          return trimmed ? `$${trimmed}$` : "";
+        })
+        .replace(/(<svg[\s>][\s\S]*?<\/svg>)/gi, (svgBlock: string) => {
+          return `\n\`\`\`svg\n${svgBlock.trim()}\n\`\`\`\n`;
+        });
+    })
+    .join("");
+}
+
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  const processedContent = useMemo(
+    () => preprocessMarkdown(content),
+    [content]
+  );
+
   return (
     <div className="vowray-markdown text-[15px] leading-[1.7] text-[var(--text-primary)] break-words">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-xl font-semibold tracking-tight mt-6 mb-3 first:mt-0 text-[var(--text-primary)]">
@@ -172,7 +228,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           },
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

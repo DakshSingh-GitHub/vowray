@@ -172,3 +172,33 @@ body {
 .hljs-bullet {
   color: #6E717A;
 }
+
+/* Mathematical expression viewer (KaTeX) */
+.vowray-markdown .katex {
+  font-size: 1.04em;
+  color: var(--text-primary);
+}
+
+.vowray-markdown .katex-display {
+  margin: 1rem 0;
+  padding: 0.9rem 1.15rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--code-bg);
+  box-shadow: var(--shadow-soft);
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+.vowray-markdown .katex-display > .katex {
+  display: inline-block;
+  min-width: 100%;
+  text-align: center;
+  font-size: 1.08em;
+}
+
+.vowray-markdown .katex .fbox,
+.vowray-markdown .katex .boxed {
+  border-color: var(--text-primary);
+}

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowUp, Check, Copy, Square } from "lucide-react";
+import { AlertCircle, ArrowUp, Check, Copy, Sparkles, Square } from "lucide-react";
 import { Message, STARTER_PROMPTS } from "@/lib/types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { GeneratedImageCard } from "./GeneratedImageCard";
 import { VowrayLogo } from "./VowrayLogo";
 
 interface ChatAreaProps {
@@ -166,11 +167,29 @@ export function ChatArea({
                       </div>
                     ) : (
                       <>
+                        {msg.statusText && (
+                          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[var(--pill-bg)]/80 border border-[var(--border-subtle)] text-xs font-medium text-[var(--text-secondary)]">
+                            <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--text-primary)]" />
+                            <span>{msg.statusText}</span>
+                          </div>
+                        )}
+
+                        {msg.images && msg.images.length > 0 && (
+                          <div className="space-y-3">
+                            {msg.images.map((img) => (
+                              <GeneratedImageCard key={img.id} image={img} />
+                            ))}
+                          </div>
+                        )}
+
                         {msg.content ? (
                           <div className="pt-0.5">
                             <MarkdownRenderer content={msg.content} />
                           </div>
-                        ) : isCurrentlyStreamingThis && !msg.isStopped ? (
+                        ) : isCurrentlyStreamingThis &&
+                          !msg.isStopped &&
+                          !msg.statusText &&
+                          !(msg.images && msg.images.length > 0) ? (
                           <div className="flex items-center gap-1.5 py-2 text-xs text-[var(--text-muted)]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] animate-pulse" />
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] animate-pulse [animation-delay:150ms]" />
